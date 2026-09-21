@@ -1,86 +1,53 @@
 # Специфікація вимог до даних: Онлайн-магазин
 
-## Сутності та атрибути
-- **CATEGORY**: `UUID category_id` (PK), `string category_name`
-- **PRODUCT**: `UUID product_id` (PK), `UUID category_id` (FK), `string product_name`, `string description`, `decimal price`
-- **PRODUCT_ITEM**: `UUID product_item_id` (PK), `UUID product_id` (FK), `string size`, `string color`, `integer stock_quantity`
-- **CUSTOMER**: `UUID customer_id` (PK), `string first_name`, `string last_name`, `string email`, `string phone`
-- **ORDER**: `UUID order_id` (PK), `UUID customer_id` (FK), `datetime order_date`, `string status`
-- **ORDER_ITEM**: `UUID order_item_id` (PK), `UUID order_id` (FK), `UUID product_item_id` (FK), `integer quantity`, `decimal unit_price`
-- **PAYMENT**: `UUID payment_id` (PK), `UUID order_id` (FK), `datetime payment_date`, `decimal amount`, `string payment_method`
+## Сутності
 
-## Зв'язки та кардинальності
-- `CATEGORY` `1` -- `0..*` `PRODUCT` ("Містить")
-- `PRODUCT` `1` -- `1..*` `PRODUCT_ITEM` ("Має характеристики")
-- `CUSTOMER` `1` -- `0..*` `ORDER` ("Робить")
-- `ORDER` `1` -- `1..*` `ORDER_ITEM` ("Містить")
-- `PRODUCT_ITEM` `1` -- `0..*` `ORDER_ITEM` ("Включено в")
-- `ORDER` `1` -- `0..1` `PAYMENT` ("Має оплату")
+> Зауважу, що в полях не записано foreign ключі, адже вони є скоріше фізичною деталлю реалізації БД, ніж концептуальним елементом.
+
+### CATEGORY
+Категорія товарів у каталозі. Атрибути: `category_id`, `category_name`.
+
+### PRODUCT
+Базовий товар магазину, що містить загальну інформацію. Атрибути: `product_id`, `product_name`, `description`, `price`.
+
+### PRODUCT_ITEM
+Конкретна варіація товару із специфічними характеристиками та залишком. Атрибути: `product_item_id`, `size`, `color`, `stock_quantity`.
+
+### CUSTOMER
+Зареєстрований покупець системи. Атрибути: `customer_id`, `first_name`, `last_name`, `email`, `phone`.
+
+### ORDER
+Оформлене замовлення в системі. Атрибути: `order_id`, `order_date`, `status`.
+
+### ORDER_ITEM
+Позиція замовлення, яка фіксує конкретний куплений товар та його вартість на момент продажу. Атрибути: `order_item_id`, `quantity`, `unit_price`.
+
+### PAYMENT
+Транзакція оплати за замовлення. Атрибути: `payment_id`, `payment_date`, `amount`, `payment_method`.
+
+---
+
+## Зв'язки
+
+### Category-Product
+Категорія може містити нуль або багато товарів, але кожен товар належить лише до однієї категорії. Зв'язок: один до нуля або багатьох.
+
+### Product-ProductItem
+Базовий товар має одну або більше конкретних варіацій (за розміром чи кольором). Кожна варіація належить лише одному базовому товару. Зв'язок: один до одного або багатьох.
+
+### Customer-Order
+Клієнт може зробити нуль або багато замовлень. Кожне замовлення належить лише одному клієнту. Зв'язок: один до нуля або багатьох.
+
+### Order-OrderItem-ProductItem
+Замовлення містить одну або більше позицій (`ORDER_ITEM`). Кожна позиція посилається на одну варіацію товару (`PRODUCT_ITEM`). Варіація товару може бути включена у нуль або багато позицій різних замовлень.
+
+### Order-Payment
+Замовлення може мати нуль або одну оплату (оскільки замовлення може бути створене до фактичного розрахунку). Оплата завжди прив'язана до одного замовлення. Зв'язок: один до нуля або одного.
+
+---
 
 ## Критерії прийняття (Acceptance Criteria)
-1. **Єдиний тип ключових полів**: Усі ідентифікатори (PK та FK) мають тип `UUID`.
-2. **Асоціативна сутність ORDER_ITEM**: Позиція замовлення містить власні атрибути (`quantity`, `unit_price`), що обґрунтовує її існування як асоціативної сутності, а не просто фізичної join-таблиці.
-3. **Фіксація ціни на момент купівлі**: `ORDER_ITEM` містить атрибут `unit_price` для збереження історичної ціни товару на момент оформлення замовлення (3NF / цілісність даних).
 
-## ER-Діаграма (Mermaid)
-
-```mermaid
-erDiagram
-    CATEGORY ||--o{ PRODUCT : "Містить"
-    PRODUCT ||--|{ PRODUCT_ITEM : "Має характеристики"
-    CUSTOMER ||--o{ ORDER : "Робить"
-    ORDER ||--|{ ORDER_ITEM : "Містить"
-    PRODUCT_ITEM ||--o{ ORDER_ITEM : "Включено в"
-    ORDER ||--o| PAYMENT : "Має оплату"
-
-    CATEGORY {
-        UUID category_id PK
-        string category_name
-    }
-
-    PRODUCT {
-        UUID product_id PK
-        UUID category_id FK
-        string product_name
-        string description
-        decimal price
-    }
-
-    PRODUCT_ITEM {
-        UUID product_item_id PK
-        UUID product_id FK
-        string size
-        string color
-        int stock_quantity
-    }
-
-    CUSTOMER {
-        UUID customer_id PK
-        string first_name
-        string last_name
-        string email
-        string phone
-    }
-
-    ORDER {
-        UUID order_id PK
-        UUID customer_id FK
-        datetime order_date
-        string status
-    }
-
-    ORDER_ITEM {
-        UUID order_item_id PK
-        UUID order_id FK
-        UUID product_item_id FK
-        int quantity
-        decimal unit_price
-    }
-
-    PAYMENT {
-        UUID payment_id PK
-        UUID order_id FK
-        datetime payment_date
-        decimal amount
-        string payment_method
-    }
+1. **Єдиний тип ключів**: Усі сутності використовують `UUID` як первинний ідентифікатор.
+2. **Асоціативна сутність ORDER_ITEM**: Позиція замовлення містить власні бізнес-атрибути (`quantity`, `unit_price`), що обґрунтовує її існування як асоціативної сутності, а не просто фізичної join-таблиці.
+3. **Фіксація ціни (3NF)**: `ORDER_ITEM` містить атрибут `unit_price` для збереження історичної ціни товару на момент оформлення замовлення.
