@@ -1,0 +1,59 @@
+erDiagram
+    CATEGORY ||--o{ PRODUCT : "Містить"
+    PRODUCT ||--|{ PRODUCT_ITEM : "Має характеристики"
+    CUSTOMER ||--o{ ORDER : "Робить"
+    ORDER ||--|{ ORDER_ITEM : "Містить"
+    PRODUCT_ITEM ||--o{ ORDER_ITEM : "Включено в"
+    ORDER ||--o| PAYMENT : "Має оплату"
+
+    CATEGORY {
+        UUID category_id PK
+        string category_name
+    }
+
+    PRODUCT {
+        UUID product_id PK
+        UUID category_id FK
+        string product_name
+        string description
+        decimal price
+    }
+
+    PRODUCT_ITEM {
+        UUID product_item_id PK
+        UUID product_id FK
+        string size
+        string color
+        int stock_quantity
+    }
+
+    CUSTOMER {
+        UUID customer_id PK
+        string first_name
+        string last_name
+        string email
+        string phone
+    }
+
+    ORDER {
+        UUID order_id PK
+        UUID customer_id FK
+        datetime order_date
+        string status
+    }
+
+    ORDER_ITEM {
+        UUID order_item_id PK
+        UUID order_id FK
+        UUID product_item_id FK
+        int quantity
+        decimal unit_price
+    }
+
+    PAYMENT {
+        UUID payment_id PK
+        UUID order_id FK
+        datetime payment_date
+        decimal amount
+        string payment_method
+    }
