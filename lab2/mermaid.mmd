@@ -1,1 +1,28 @@
+graph LR
+    %% Актори
+    Customer((Customer))
+    Admin((Store Manager))
+    PaymentGW[["Payment Gateway"]]
+    NotifSVC[["Notification Service"]]
 
+    %% Precedents (Use Cases)
+    UC1([UC-01: View Catalog & SKU])
+    UC2([UC-02: Checkout Order])
+    UC3([UC-03: Process Payment])
+    UC4([UC-04: Cancel Expired Order])
+    UC5([UC-05: Apply Promo Code])
+    UC6([UC-06: Manage Inventory])
+
+    %% Зв'язки Акторів
+    Customer --> UC1
+    Customer --> UC2
+    Admin --> UC6
+    
+    UC3 --> PaymentGW
+    UC2 --> NotifSVC
+
+    %% Include & Extend
+    UC2 ..-> UC1 : <<include>>
+    UC5 ..-> UC2 : <<extend>>
+    UC3 ..-> UC2 : <<extend>>
+    UC4 ..-> UC3 : <<extend>>
