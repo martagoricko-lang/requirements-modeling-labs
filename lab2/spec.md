@@ -37,10 +37,11 @@ Scenario: Перегляд конкретної варіації товару
   When Покупець обирає розмір "42" та колір "Чорний"
   Then Система відображає залишок "3 шт." та вартість "2400 UAH"
 
-EARS req,User story,Use case,Gherkin,Покриття
-REQ-01,US-01,UC-01,SCN-01,+
-REQ-02,US-02,UC-02,SCN-02,+
-REQ-03,US-02,"UC-02, UC-03",SCN-02,+
-REQ-04,US-02,"UC-03, UC-03a",SCN-02,+
-REQ-05,—,UC-04,—,+
-REQ-06,—,—,—,- (Не покрито)
+| EARS req | User story | Use case | Gherkin | Покриття |
+| :--- | :--- | :--- | :--- | :--- |
+| REQ1 | US1 | UC1 | SCN1 | + |
+| REQ2 | US2 | UC2 | SCN2 | + |
+| REQ3 | US2 | UC2, UC3 | SCN2 | + |
+| REQ4 | US2 | UC3, UC3a | SCN2 | + |
+| REQ5 | - | UC4 | - | + |
+| REQ6 | - | - | - | - |
