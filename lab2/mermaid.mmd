@@ -1,21 +1,27 @@
 graph LR
+    Guest((Guest))
     Customer((Customer))
     Admin((Store Manager))
     PaymentGW[["Payment Gateway"]]
     NotifSVC[["Notification Service"]]
 
+    Customer -- Generalization --> Guest
+
     UC1([UC-01: View Catalog & SKU])
     UC2([UC-02: Checkout Order])
     UC3([UC-03: Process Payment])
+    UC3a([UC-03a: Pay via Card])
     UC4([UC-04: Cancel Expired Order])
     UC5([UC-05: Apply Promo Code])
     UC6([UC-06: Manage Inventory])
 
-    Customer --> UC1
+    UC3a -- Generalization --> UC3
+
+    Guest --> UC1
     Customer --> UC2
     Admin --> UC6
     
-    UC3 --> PaymentGW
+    PaymentGW --> UC3a
     UC2 --> NotifSVC
 
     UC2 -. "include" .-> UC1
