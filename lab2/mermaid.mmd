@@ -1,12 +1,14 @@
 graph LR
-    Guest((Guest))
+    %% Актори та Генералізація
     Customer((Customer))
-    Admin((Store Manager))
+    Guest((Guest))
+    StoreManager((Store Manager))
     PaymentGW[["Payment Gateway"]]
     NotifSVC[["Notification Service"]]
 
     Customer -- Generalization --> Guest
 
+    %% Precedents (Use Cases)
     UC1([UC-01: View Catalog & SKU])
     UC2([UC-02: Checkout Order])
     UC3([UC-03: Process Payment])
@@ -15,16 +17,19 @@ graph LR
     UC5([UC-05: Apply Promo Code])
     UC6([UC-06: Manage Inventory])
 
+    %% Узагальнення прецедентів
     UC3a -- Generalization --> UC3
 
+    %% Зв'язки Акторов
     Guest --> UC1
     Customer --> UC2
-    Admin --> UC6
+    StoreManager --> UC6
     
     PaymentGW --> UC3a
     UC2 --> NotifSVC
 
+    %% Include & Extend (ПРАВИЛЬНІ НАПРЯМКИ СТРІЛОК)
     UC2 -. "include" .-> UC1
-    UC5 -. "extend" .-> UC2
     UC3 -. "extend" .-> UC2
+    UC5 -. "extend" .-> UC2
     UC4 -. "extend" .-> UC3
