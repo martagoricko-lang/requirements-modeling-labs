@@ -1,0 +1,30 @@
+graph LR
+    %% Актори поза межами системи
+    Customer((Customer))
+    RegisteredCustomer((Registered Customer))
+    StoreManager((Store Manager))
+
+    %% Узагальнення акторів
+    RegisteredCustomer -- Generalization --> Customer
+
+    %% Границі системи (System Boundary)
+    subgraph System ["E-Commerce Platform"]
+        UC1([UC-01: View Catalog & SKU])
+        UC2([UC-02: Checkout Order])
+        UC3([UC-03: Process Payment])
+        UC3a([UC-03a: Pay via Card])
+        UC5([UC-05: Apply Promo Code])
+        UC6([UC-06: Manage Inventory])
+
+        %% Узагальнення прецедентів
+        UC3a -- Generalization --> UC3
+
+        %% Extend усередині системи
+        UC3 -. "extend" .-> UC2
+        UC5 -. "extend" .-> UC2
+    end
+
+    %% Зв'язки Акторів із прецедентами
+    Customer --> UC1
+    RegisteredCustomer --> UC2
+    StoreManager --> UC6
