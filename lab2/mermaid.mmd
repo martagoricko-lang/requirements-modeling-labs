@@ -1,37 +1,30 @@
 graph LR
     %% Актори поза межами системи
     Customer((Customer))
-    Guest((Guest))
+    RegisteredCustomer((Registered Customer))
     StoreManager((Store Manager))
-    PaymentGW[["Payment Gateway"]]
-    NotifSVC[["Notification Service"]]
 
-    Customer -- Generalization --> Guest
+    %% Узагальнення акторів
+    RegisteredCustomer -- Generalization --> Customer
 
     %% Границі системи (System Boundary)
-    subgraph System ["E-Commerce Platform Boundary"]
+    subgraph System ["E-Commerce Platform"]
         UC1([UC-01: View Catalog & SKU])
         UC2([UC-02: Checkout Order])
         UC3([UC-03: Process Payment])
         UC3a([UC-03a: Pay via Card])
-        UC4([UC-04: Cancel Expired Order])
         UC5([UC-05: Apply Promo Code])
         UC6([UC-06: Manage Inventory])
 
         %% Узагальнення прецедентів
         UC3a -- Generalization --> UC3
 
-        %% Include & Extend усередині системи
-        UC2 -. "include" .-> UC1
+        %% Extend усередині системи
         UC3 -. "extend" .-> UC2
         UC5 -. "extend" .-> UC2
-        UC4 -. "extend" .-> UC3
     end
 
-    %% Зв'язки Акторів із прецедентами системи
-    Guest --> UC1
-    Customer --> UC2
+    %% Зв'язки Акторів із прецедентами
+    Customer --> UC1
+    RegisteredCustomer --> UC2
     StoreManager --> UC6
-    
-    PaymentGW --> UC3a
-    UC2 --> NotifSVC
