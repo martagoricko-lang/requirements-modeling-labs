@@ -1,0 +1,90 @@
+sequenceDiagram
+    autonumber
+
+    actor Customer as Registered Customer
+    participant UI as WebUI
+    participant Controller as OrderController
+    participant Stock as StockService
+    participant Payment as PaymentService
+    participant Gateway as PaymentGateway
+    participant DB as Database (ORDER/PRODUCT_ITEM)
+
+    %% Scenario 1 & 2: Checkout Request & Stock Validation
+    Customer->>UI: submitOrder(cartItems, paymentMethod)
+    activate UI
+    UI->>Controller: createOrder(customerId, items, paymentMethod)
+    activate Controller
+    
+    Controller->>Stock: checkAndReserveStock(items)
+    activate Stock
+    Stock->>DB: SELECT stock_quantity FROM PRODUCT_ITEM WHERE id IN (items)
+    activate DB
+    DB-->>Stock: return stock_quantity
+    deactivate DB
+
+    alt Scenario 2: Insufficient Stock (REQ-02)
+        Stock-->>Controller: throw InsufficientStockException
+        Controller-->>UI: 400 Bad Request ("Товару немає в наявності")
+        UI-->>Customer: Повідомлення "Недостатньо товару на складі"
+    else Scenario 1: Stock Available (Happy Path)
+        Stock->>DB: UPDATE PRODUCT_ITEM SET stock_quantity = stock_quantity - qty
+        activate DB
+        DB-->>Stock: stock updated
+        deactivate DB
+        Stock-->>Controller: stockReserved = true
+        deactivate Stock
+
+        Controller->>DB: INSERT INTO ORDER (status='Pending_Payment') & ORDER_ITEM (unit_price)
+        activate DB
+        DB-->>Controller: orderCreated (orderId)
+        deactivate DB
+
+        opt Payment Method is Online (Scenario 4 / REQ-04)
+            Controller->>Payment: processPayment(orderId, amount)
+            activate Payment
+            Payment->>Gateway: executeTransaction(cardDetails, amount)
+            activate Gateway
+            
+            alt Payment Rejected (Scenario 4)
+                Gateway-->>Payment: return Status "Payment_Rejected"
+                Payment->>DB: INSERT INTO PAYMENT (status='Failed')
+                Payment-->>Controller: paymentFailed
+                Controller-->>UI: 200 OK (orderId, status='Pending_Payment', warning='Payment Failed')
+                UI-->>Customer: Повідомлення "Помилка оплати. Спробуйте іншу картку"
+            else Payment Successful
+                Gateway-->>Payment: return Status "Success"
+                deactivate Gateway
+                Payment->>DB: INSERT INTO PAYMENT (status='Success')
+                Payment->>DB: UPDATE ORDER SET status='Processing'
+                Payment-->>Controller: paymentSuccess
+                deactivate Payment
+                Controller-->>UI: 200 OK (orderId, status='Processing')
+                UI-->>Customer: Екран підтвердження успішного замовлення
+            end
+        end
+    end
+    deactivate Controller
+    deactivate UI
+
+    %% Scenario 3: Timeout Path (REQ-05 Background Process)
+    note over Controller, DB: Scenario 3: Background Scheduler (30 min Timeout)
+    loop Every 5 minutes
+        Controller->>DB: SELECT order_id FROM ORDER WHERE status='Pending_Payment' AND created_at < NOW() - 30m
+        activate Controller
+        activate DB
+        DB-->>Controller: expiredOrdersList
+        deactivate DB
+        
+        opt Expired Orders Found
+            Controller->>DB: UPDATE ORDER SET status='Cancelled_Expired' WHERE id IN (expiredOrdersList)
+            Controller->>Stock: releaseStock(expiredItems)
+            activate Stock
+            Stock->>DB: UPDATE PRODUCT_ITEM SET stock_quantity = stock_quantity + qty
+            activate DB
+            DB-->>Stock: stock restored
+            deactivate DB
+            Stock-->>Controller: stockReleased
+            deactivate Stock
+        end
+        deactivate Controller
+    end
