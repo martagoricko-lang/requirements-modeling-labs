@@ -1,1 +1,59 @@
+%%{init: {'theme': 'default'}}%%
+sequenceDiagram
+    autonumber
+    actor Customer as RegisteredCustomer
+    participant UI as WebUI
+    participant Controller as OrderController
+    participant Stock as StockService
+    participant Payment as PaymentService
+    participant Gateway as PaymentGateway
+    participant DB as Database
 
+    Customer->>UI: submitOrder(cartItems, paymentMethod)
+    activate UI
+    UI->>Controller: submitOrder(customerId, items, paymentMethod)
+    activate Controller
+
+    Controller->>Stock: checkAndReserveStock(items)
+    activate Stock
+    loop Для кожної позиції в items
+        Stock->>DB: SELECT stock_quantity FROM PRODUCT_ITEM WHERE id = item.id
+        activate DB
+        DB-->>Stock: return stock_quantity
+        deactivate DB
+        Stock->>DB: UPDATE PRODUCT_ITEM SET stock_quantity = stock_quantity - item.qty
+        activate DB
+        DB-->>Stock: stock updated
+        deactivate DB
+    end
+    Stock-->>Controller: stockReserved = true
+    deactivate Stock
+
+    Controller->>DB: INSERT INTO ORDER (status='Pending_Payment') & ORDER_ITEM (unit_price)
+    activate DB
+    DB-->>Controller: orderCreated(orderId)
+    deactivate DB
+
+    opt Обрано онлайн-оплату
+        Controller->>Payment: processPayment(orderId, amount)
+        activate Payment
+        Payment->>Gateway: executeTransaction(cardDetails, amount)
+        activate Gateway
+        Gateway-->>Payment: return Status "Success"
+        deactivate Gateway
+        Payment->>DB: INSERT INTO PAYMENT (status='Success')
+        activate DB
+        DB-->>Payment: paymentSaved
+        deactivate DB
+        Payment->>DB: UPDATE ORDER SET status='Processing'
+        activate DB
+        DB-->>Payment: orderUpdated
+        deactivate DB
+        Payment-->>Controller: paymentSuccess
+        deactivate Payment
+    end
+
+    Controller-->>UI: 200 OK (orderId, status='Processing')
+    deactivate Controller
+    UI-->>Customer: Екран підтвердження успішного замовлення
+    deactivate UI
