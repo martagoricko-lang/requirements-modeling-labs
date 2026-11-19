@@ -1,0 +1,33 @@
+%%{init: {'theme': 'dark'}}%%
+sequenceDiagram
+    autonumber
+    actor Customer as RegisteredCustomer
+    participant UI as WebUI
+    participant Controller as OrderController
+    participant Stock as StockService
+    participant DB as Database
+
+    Customer->>UI: submitOrder(cartItems, paymentMethod)
+    activate UI
+    UI->>Controller: submitOrder(customerId, items, paymentMethod)
+    activate Controller
+
+    Controller->>Stock: checkAndReserveStock(items)
+    activate Stock
+    Stock->>DB: SELECT stock_quantity FROM PRODUCT_ITEM WHERE id IN (items)
+    activate DB
+    DB-->>Stock: return stock_quantity
+    deactivate DB
+
+    alt stock_quantity < requested_qty
+        Stock-->>Controller: throw InsufficientStockException
+        Controller-->>UI: 400 Bad Request ("Товару немає в наявності")
+        UI-->>Customer: Повідомлення "Недостатньо товару на складі"
+    else stock_quantity >= requested_qty
+        Stock-->>Controller: stockReserved = true
+        Controller-->>UI: 200 OK (продовження оформлення)
+    end
+
+    deactivate Stock
+    deactivate Controller
+    deactivate UI

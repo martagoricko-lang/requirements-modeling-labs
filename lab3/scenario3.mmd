@@ -1,0 +1,35 @@
+%%{init: {'theme': 'dark'}}%%
+sequenceDiagram
+    autonumber
+    participant Scheduler as SystemScheduler
+    participant Controller as OrderController
+    participant Stock as StockService
+    participant DB as Database
+
+    loop Кожні 5 хвилин
+        Scheduler->>Controller: checkExpiredOrders()
+        activate Controller
+        Controller->>DB: SELECT order_id FROM ORDER WHERE status='Pending_Payment' AND created_at < NOW() - 30m
+        activate DB
+        DB-->>Controller: expiredOrdersList
+        deactivate DB
+
+        opt Знайдено прострочені замовлення (expiredOrdersList не порожній)
+            Controller->>DB: UPDATE ORDER SET status='Cancelled_Expired' WHERE id IN (expiredOrdersList)
+            activate DB
+            DB-->>Controller: ordersCancelled
+            deactivate DB
+
+            Controller->>Stock: releaseStock(items)
+            activate Stock
+            Stock->>DB: UPDATE PRODUCT_ITEM SET stock_quantity = stock_quantity + qty
+            activate DB
+            DB-->>Stock: stock restored
+            deactivate DB
+            Stock-->>Controller: stockReleased
+            deactivate Stock
+        end
+
+        Controller-->>Scheduler: batchCompleted
+        deactivate Controller
+    end
