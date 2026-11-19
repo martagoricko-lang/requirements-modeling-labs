@@ -1,0 +1,47 @@
+%%{init: {'theme': 'dark'}}%%
+sequenceDiagram
+    autonumber
+    actor Customer as RegisteredCustomer
+    participant UI as WebUI
+    participant Controller as OrderController
+    participant Payment as PaymentService
+    participant Gateway as PaymentGateway
+    participant DB as Database
+
+    Customer->>UI: payOrder(orderId, cardDetails)
+    activate UI
+    UI->>Controller: processPayment(orderId, amount)
+    activate Controller
+    Controller->>Payment: processPayment(orderId, amount)
+    activate Payment
+    Payment->>Gateway: executeTransaction(cardDetails, amount)
+    activate Gateway
+
+    alt Платіж відхилено банком (PaymentRejected)
+        Gateway-->>Payment: return Status "Payment_Rejected"
+        Payment->>DB: INSERT INTO PAYMENT (status='Failed')
+        activate DB
+        DB-->>Payment: paymentSaved
+        deactivate DB
+        Payment-->>Controller: paymentFailed
+        Controller-->>UI: 200 OK (orderId, status='Pending_Payment', warning='Payment Failed')
+        UI-->>Customer: Повідомлення "Помилка оплати. Спробуйте іншу картку"
+    else Платіж підтверджено (Success)
+        Gateway-->>Payment: return Status "Success"
+        Payment->>DB: INSERT INTO PAYMENT (status='Success')
+        activate DB
+        DB-->>Payment: paymentSaved
+        deactivate DB
+        Payment->>DB: UPDATE ORDER SET status='Processing'
+        activate DB
+        DB-->>Payment: orderUpdated
+        deactivate DB
+        Payment-->>Controller: paymentSuccess
+        Controller-->>UI: 200 OK (orderId, status='Processing')
+        UI-->>Customer: Екран підтвердження оплати
+    end
+
+    deactivate Gateway
+    deactivate Payment
+    deactivate Controller
+    deactivate UI
