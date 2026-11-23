@@ -1,1 +1,68 @@
+%%{init: {'theme': 'dark'}}%%
+flowchart TD
+    %% Початковий вузол
+    Start((Початок)) --> InitCheckout[Ініціювати оформлення замовлення]
 
+    subgraph RegisteredCustomer [Покупець / RegisteredCustomer]
+        InitCheckout
+        FixCart[Отримати сповіщення про нестачу товару]
+        RetryPay[Отримати помилку оплати / повторити спробу]
+        GetConfirm[Отримати підтвердження замовлення]
+    end
+
+    subgraph System [Система / Order & Stock & Payment Services]
+        CheckStock[Перевірити stock_quantity у PRODUCT_ITEM]
+        IsStockOk{Товару достатньо?}
+        ReserveAndCreate[Зарезервувати залишки та створити ORDER = Pending_Payment]
+        SendPayReq[Сформувати запит на онлайн-оплату]
+        WaitPay{Отримано відповідь платіжного шлюзу за 30 хв?}
+        CancelTimeout[Таймаут REQ-05: Змінити ORDER на Cancelled_Expired]
+        ReleaseStock[Повернути залишки до stock_quantity]
+        IsPaySuccess{Платіж успішний?}
+        SaveFailed[Записати PAYMENT = Failed]
+        ForkSuccess[[fork]]
+        SavePayment[Записати PAYMENT = Success]
+        UpdateOrder[Оновити ORDER = Processing та зафіксувати ORDER_ITEM]
+        JoinSuccess[[join]]
+        NotifyConfirm[Сформувати підтвердження замовлення]
+    end
+
+    subgraph PaymentGateway [Зовнішня платіжна система / PaymentGateway]
+        ProcessGateway[Обробити транзакцію за карткою]
+    end
+
+    %% Потік виконання та обмін повідомленнями
+    InitCheckout -.->|submitOrder| CheckStock
+    CheckStock --> IsStockOk
+
+    %% Гілка 1: Нестача товару (REQ-02)
+    IsStockOk -->|Ні / InsufficientStock| FixCart
+    FixCart --> EndFailStock((Кінець))
+
+    %% Гілка 2: Резервування та перехід до оплати
+    IsStockOk -->|Так| ReserveAndCreate
+    ReserveAndCreate --> SendPayReq
+    SendPayReq -.->|executeTransaction| ProcessGateway
+    ProcessGateway -.->|Статус або таймаут| WaitPay
+
+    %% Гілка 3: Таймаут 30 хв (REQ-05)
+    WaitPay -->|Ні / Таймаут 30 хв| CancelTimeout
+    CancelTimeout --> ReleaseStock
+    ReleaseStock --> EndTimeout((Кінець))
+
+    %% Гілка 4: Відповідь отримана — перевірка статусу оплати (REQ-04)
+    WaitPay -->|Так| IsPaySuccess
+    IsPaySuccess -->|Ні / Payment_Rejected| SaveFailed
+    SaveFailed -.->|Помилка оплати| RetryPay
+    RetryPay --> EndFailPay((Кінець))
+
+    %% Гілка 5: Успішна оплата + паралельна гілка (fork / join)
+    IsPaySuccess -->|Так / Success| ForkSuccess
+    ForkSuccess --> SavePayment
+    ForkSuccess --> UpdateOrder
+    SavePayment --> JoinSuccess
+    UpdateOrder --> JoinSuccess
+
+    JoinSuccess --> NotifyConfirm
+    NotifyConfirm -.->|200 OK / Підтвердження| GetConfirm
+    GetConfirm --> EndSuccess((Кінець))
