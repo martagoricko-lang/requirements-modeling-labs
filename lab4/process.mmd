@@ -66,3 +66,10 @@ flowchart TD
     JoinSuccess --> NotifyConfirm
     NotifyConfirm -.->|200 OK / Підтвердження| GetConfirm
     GetConfirm --> EndSuccess((Кінець))
+
+    %% Стилізація початкового та кінцевих вузлів
+    style Start fill:#1f6feb,stroke:#58a6ff,color:#fff
+    style EndSuccess fill:#238636,stroke:#3fb950,color:#fff
+    style EndFailStock fill:#da3633,stroke:#f85149,color:#fff
+    style EndTimeout fill:#d29922,stroke:#e3b341,color:#fff
+    style EndFailPay fill:#da3633,stroke:#f85149,color:#fff
